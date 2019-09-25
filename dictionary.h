@@ -14,8 +14,11 @@ class Dictionary
 {
 	using uc = unsigned char;
 public:
+	vector<unsigned short>& GetMem(int dictIndex);
+	int GetDictIndex(string s);
 	static int levenstein(string a, string b);
 public:
+	vector<vector<unsigned short>> mem;
 	unordered_map<string, string> explanationDict;
 	unordered_map<string, string> dirtyDict;
 	vector<string> allWords;

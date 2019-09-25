@@ -69,9 +69,29 @@ void SolverService::Listen()
 
 bool SolverService::TestPut(int posIndex, unsigned short wordIndex)
 {
-	string &w = dict_.allWords[wordIndex];
-	vector<unsigned char*>& letters = cross_.areas[posIndex].letters;
-	for(int i = 0; i < )
+	string & w = dict_.allWords[wordIndex];
+	vector<unsigned char*> & letters = cross_.areas[posIndex].letters;
+	vector<unsigned char> backup(letters.size());
+	vector<int> dictBackup(letters.size(),-1);
+ 
+	for (int i = 0; i < letters.size(); i++) {
+		backup[i] = *letters[i];
+		if (*letters[i] != w[i]) {
+			*letters[i] = w[i];
+			if (neighbor[posIndex][i] != -1) {
+				dictBackup[i] = cross_.areas[neighbor[posIndex][i]].dictIndex;
+				int newDictIndex = dict_.GetDictIndex(cross_.areas[neighbor[posIndex][i]]);
+				if (newDictIndex == -1) {
+					for (; i >= 0; i--) {
+						*letters[i] = backup[i];
+						if (neighbor[posIndex][i] != -1) 
+							cross_.areas[neighbor[posIndex][i]].dictIndex = dictBackup[i];
+					}
+					return false;
+				}
+			}
+		}
+	}
 }
 
 bool SolverService::IsReady() const
