@@ -23,7 +23,25 @@ void SolverService::Prepare()
 
 void SolverService::StartSolving() 
 {
-	
+	while (!IsReady()) {
+	beginOperation:;
+		if (currIndex_ == -1)currIndex_ = 0, positionIndices_[0] = GetNextPosIndex();
+		Position& currPos = cross_.areas[positionIndices_[currIndex_]];
+		vector<unsigned short>& wordIndices = dict_.GetMem(currPos.dictIndex);
+		for (int i = wordIndex_[currIndex_]; i < wordIndices.size(); i++) {
+			if (usedIndices_[wordIndices[i]])						   continue;
+			if (currPen_ + penalty_[wordIndices[i]] >= penThreshold_)  continue;
+			if (!TestPut(positionIndices_[currIndex_], wordIndices[i]))continue;
+
+			currIndex_ += 1;
+			positionIndices_[currIndex_] = GetNextPosIndex();
+			wordIndex_[currIndex_] = i;
+			goto beginOperation;
+		}
+		wordIndex_[currIndex_] = 0;
+		positionIndices_[currIndex_] = -1;
+		currIndex_ -= 1;
+	}
 }
 
 void SolverService::PrintEvery(chrono::milliseconds ms) const {
@@ -49,12 +67,24 @@ void SolverService::Listen()
 	}
 }
 
+bool SolverService::TestPut(int posIndex, unsigned short wordIndex)
+{
+	string &w = dict_.allWords[wordIndex];
+	vector<unsigned char*>& letters = cross_.areas[posIndex].letters;
+	for(int i = 0; i < )
+}
+
 bool SolverService::IsReady() const
 {
-	int temp = NumPositions - 32, i = 0;
+	int temp = NumPositions_ - 32, i = 0;
 	for (; temp > 0; temp -= 32, i++) 
-		if ((IsComplete[i] & 0xFFFFFFFF) != 0xFFFFFFFF) // Not every bit in the integer is set
+		if ((IsComplete_[i] & 0xFFFFFFFF) != 0xFFFFFFFF) // Not every bit in the integer is set
 			return false;
-	if ((1 << (temp + 32)) - 1 != IsComplete[i]) return false;
+	if ((1 << (temp + 32)) - 1 != IsComplete_[i]) return false;
 	return true;
+}
+
+int SolverService::GetNextPosIndex() const
+{
+	return 0;
 }
