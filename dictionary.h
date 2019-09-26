@@ -13,12 +13,15 @@ using namespace std;
 class Dictionary
 {
 	using uc = unsigned char;
+private:
+	int process(string s);
 public:
 	vector<unsigned short>& GetMem(int dictIndex);
 	int GetDictIndex(string s);
 	static int levenstein(string a, string b);
 public:
 	vector<vector<unsigned short>> mem;
+	unordered_map<string, int> stringToDictIndex;
 	unordered_map<string, string> explanationDict;
 	unordered_map<string, string> dirtyDict;
 	vector<string> allWords;

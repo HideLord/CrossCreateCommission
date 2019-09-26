@@ -1,5 +1,41 @@
 #include "dictionary.h"
 #include "Constants.h"
+#include <cassert>
+
+int Dictionary::process(string s)
+{
+	vector<unsigned short> V;
+	for (int i = 0; i < allWords.size(); i++) {
+		if (s.size() != allWords[i].size())continue;
+		bool add = true;
+		for (int j = 0; j < s.size(); j++) {
+			if (s[j] == emptyChar)continue;
+			if (s[j] != allWords[i][j]) {
+				add = false;
+				break;
+			}
+		}
+		if (add) V.push_back(i);
+	}
+	if (V.empty())return -1;
+	mem.push_back(V);
+	return mem.size() - 1;
+}
+
+vector<unsigned short>& Dictionary::GetMem(int dictIndex){
+	assert(dictIndex >= 0);
+	return mem[dictIndex];
+}
+
+int Dictionary::GetDictIndex(string s)
+{
+	if (stringToDictIndex.count(s)) {
+		return stringToDictIndex[s];
+	}
+	else {
+		return stringToDictIndex[s] = process(s);
+	}
+}
 
 int Dictionary::levenstein(string a, string b) {
 	vector<vector<int>> dp(a.length()+1, vector<int>(b.length()+1, 0));
