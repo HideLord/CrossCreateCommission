@@ -7,6 +7,7 @@
 #include <thread>
 #include <vector>
 #include <algorithm>
+#include "SegTree.h"
 
 class SolverService : ISolver {
 public:
@@ -19,6 +20,8 @@ private:
 	int neighbors_[480][50]; // LengthLimit of a word is 50
 	int penalty_[60000];
 	bool usedIndices_[60000];
+	string prevState[480];
+	SegTree<1024, double> segTree_;
 	Crossword cross_;
 	Dictionary dict_;
 private:
@@ -26,6 +29,7 @@ private:
 	void StartSolving();
 	void PrintEvery(chrono::milliseconds ms) const;
 	void Listen();
+	void UpdateValue(int posIndex);
 	bool TestPut(int posIndex, unsigned short wordIndex);
 	bool IsReady() const;
 	int GetNextPosIndex() const;

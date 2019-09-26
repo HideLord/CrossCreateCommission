@@ -19,6 +19,8 @@ Crossword SolverService::Solve(Crossword unsolved)
 
 void SolverService::Prepare()
 {
+	dict_.loadDict();
+
 	numPositions_ = cross_.areas.size();
 
 	auto checkForSamePointer = [&](Position& A, Position& B) ->int const {
@@ -36,7 +38,11 @@ void SolverService::Prepare()
 			neighbors_[i][res] = j;
 		}
 	}
-	
+
+	currPen_ = 0;
+	penThreshold_ = 150;
+	memset(penalty_, 0, sizeof penalty_);
+
 	memset(usedIndices_, 0, sizeof usedIndices_);
 
 	memset(wordIndex_, 0, sizeof wordIndex_);
@@ -63,16 +69,18 @@ void SolverService::StartSolving()
 		if (currIndex_ == -1)currIndex_ = 0, positionIndices_[0] = GetNextPosIndex();
 		Position& currPos = cross_.areas[positionIndices_[currIndex_]];
 		vector<unsigned short>& wordIndices = dict_.GetMem(currPos.dictIndex);
+		if (wordIndex_[currIndex_] == 0)prevState_[currIndex_] = currPos.ToString();
 		for (int i = wordIndex_[currIndex_]; i < wordIndices.size(); i++) {
-			if (usedIndices_[wordIndices[i]])						   continue;
-			if (currPen_ + penalty_[wordIndices[i]] >= penThreshold_)  continue;
-			if (!TestPut(positionIndices_[currIndex_], wordIndices[i]))continue;
+			if (usedIndices_[wordIndices[i]])						    continue;
+			if (currPen_ + penalty_[wordIndices[i]] >= penThreshold_)   continue;
+			if (!TestPut(positionIndices_[currIndex_], wordIndices[i])) continue;
 
 			currIndex_ += 1;
 			positionIndices_[currIndex_] = GetNextPosIndex();
 			wordIndex_[currIndex_] = i;
 			goto beginOperation;
 		}
+		TestPut(positionIndices_[currIndex_],prevState_[currIndex_]);
 		wordIndex_[currIndex_] = 0;
 		positionIndices_[currIndex_] = -1;
 		currIndex_ -= 1;
@@ -102,6 +110,13 @@ void SolverService::Listen()
 	}
 }
 
+void SolverService::UpdateValue(int posIndex)
+{
+	double val =
+		(double)100.0 / (dict_.GetMem(cross_.areas[posIndex].dictIndex).size() / cross_.areas[posIndex].letters.size());
+	segTree_.Modify(posIndex, val);
+}
+
 bool SolverService::TestPut(int posIndex, unsigned short wordIndex)
 {
 	string & w = dict_.allWords[wordIndex];
@@ -109,7 +124,7 @@ bool SolverService::TestPut(int posIndex, unsigned short wordIndex)
 	vector<unsigned char> backup(letters.size());
 	vector<int> dictBackup(letters.size(),-1);
  
-	for (int i = 0; i < letters.size(); i++) {
+	for (int i = 0; i < backup.size(); i++) {
 		backup[i] = *letters[i];
 		if (*letters[i] != w[i]) {
 			*letters[i] = w[i];
@@ -124,6 +139,32 @@ bool SolverService::TestPut(int posIndex, unsigned short wordIndex)
 					}
 					return false;
 				}
+				else {
+					cross_.areas[neighbors_[posIndex][i]].dictIndex = newDictIndex;
+				}
+			}
+		}
+	}
+
+	for (int i = 0; i < backup.size(); i++) {
+		if (dictBackup[i] != -1) {
+			UpdateValue(neighbors_[posIndex][i]);
+		}
+	}
+
+	return true;
+}
+
+bool SolverService::TestPut(int posIndex, string& w)
+{
+	vector<unsigned char*>& letters = cross_.areas[posIndex].letters;
+
+	for (int i = 0; i < letters.size(); i++) {
+		if (*letters[i] != w[i]) {
+			*letters[i] = w[i];
+			if (neighbors_[posIndex][i] != -1) {
+				cross_.areas[neighbors_[posIndex][i]].dictIndex = dict_.GetDictIndex(cross_.areas[neighbors_[posIndex][i]].ToString());
+				UpdateValue(neighbors_[posIndex][i]);
 			}
 		}
 	}
@@ -143,5 +184,5 @@ bool SolverService::IsReady() const
 
 int SolverService::GetNextPosIndex() const
 {
-	return 0;
+	return segTree_.QueryInd(0, numPositions_);
 }
