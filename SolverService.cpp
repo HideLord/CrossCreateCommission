@@ -5,12 +5,25 @@
 Crossword SolverService::Solve(Crossword unsolved)
 {
 	cross_ = unsolved;
-	//thread listener_thread([this]() { Listen(); }); // Listen for outside commands
-	//listener_thread.detach();
+
+	thread listener_thread([this]() { Listen(); }); // Listen for outside commands
+	listener_thread.detach();
+
 	thread printer_thread([this]() { PrintEvery(chrono::milliseconds(20)); }); // Print crossword every 20ms
 
-	Prepare();
+	try {
+		cout << "Starting to prepare..." << endl;
+		Prepare();
+		cout << "Finished preparing without problems" << endl;
+	}
+	catch (char * exception) {
+		cout << exception << endl;
+		return unsolved;
+	}
+
+	cout << "Starting to solve..." << endl;
 	StartSolving();
+	cout << "Solved" << endl;
 
 	if(printer_thread.joinable()) printer_thread.join();
 
@@ -19,21 +32,26 @@ Crossword SolverService::Solve(Crossword unsolved)
 
 void SolverService::Prepare()
 {
-	dict_.loadDict();
-
-	numPositions_ = cross_.areas.size();
+	try {
+		dict_.loadDict();
+	}
+	catch (char* exception) {
+		cout << exception << endl;
+		throw exception;
+	}
+	numPositions_ = cross_.areas_.size();
 
 	auto checkForSamePointer = [&](Position& A, Position& B) ->int const {
-		if (A.hor == B.hor)return -1;
-		for (int i = 0; i < A.letters.size(); i++)
-			for (int j = 0; j < B.letters.size(); j++)
-				if (A.letters[i] == B.letters[j])return i;
+		if (A.isHor_ == B.isHor_)return -1;
+		for (int i = 0; i < A.letters_.size(); i++)
+			for (int j = 0; j < B.letters_.size(); j++)
+				if (A.letters_[i] == B.letters_[j])return i;
 			
 		return -1;
 	};
-	for (int i = 0; i < cross_.areas.size(); i++) {
-		for (int j = 0; j < cross_.areas.size(); j++) {
-			int res = checkForSamePointer(cross_.areas[i], cross_.areas[j]);
+	for (int i = 0; i < cross_.areas_.size(); i++) {
+		for (int j = 0; j < cross_.areas_.size(); j++) {
+			int res = checkForSamePointer(cross_.areas_[i], cross_.areas_[j]);
 			if (res == -1)continue;
 			neighbors_[i][res] = j;
 		}
@@ -41,22 +59,23 @@ void SolverService::Prepare()
 
 	currPen_ = 0;
 	penThreshold_ = 150;
-	memset(penalty_, 0, sizeof penalty_);
 
-	memset(usedIndices_, 0, sizeof usedIndices_);
+	std::memset(penalty_, 0, sizeof penalty_);
 
-	memset(wordIndex_, 0, sizeof wordIndex_);
+	std::memset(usedIndices_, 0, sizeof usedIndices_);
 
-	memset(isComplete_, 0, sizeof isComplete_);
+	std::memset(wordIndex_, 0, sizeof wordIndex_);
 
-	memset(positionIndices_, 0, sizeof positionIndices_);
+	std::memset(isComplete_, 0, sizeof isComplete_);
+
+	std::memset(positionIndices_, 0, sizeof positionIndices_);
 
 	auto checkIfComplete = [&](Position& A) ->bool const {
-		for (int i = 0; i < A.letters.size(); i++)if (*A.letters[i] == emptyChar)return false;
+		for (int i = 0; i < A.letters_.size(); i++)if (*A.letters_[i] == emptyChar)return false;
 		return true;
 	};
-	for (int i = 0; i < cross_.areas.size(); i++) {
-		if (checkIfComplete(cross_.areas[i])) {
+	for (int i = 0; i < cross_.areas_.size(); i++) {
+		if (checkIfComplete(cross_.areas_[i])) {
 			isComplete_[i / 32] |= (1 << (i % 32));
 		}
 	}
@@ -67,8 +86,8 @@ void SolverService::StartSolving()
 	while (!IsReady()) {
 	beginOperation:;
 		if (currIndex_ == -1)currIndex_ = 0, positionIndices_[0] = GetNextPosIndex();
-		Position& currPos = cross_.areas[positionIndices_[currIndex_]];
-		vector<unsigned short>& wordIndices = dict_.GetMem(currPos.dictIndex);
+		Position& currPos = cross_.areas_[positionIndices_[currIndex_]];
+		vector<unsigned short>& wordIndices = dict_.GetMem(currPos.dictIndex_);
 		if (wordIndex_[currIndex_] == 0)prevState_[currIndex_] = currPos.ToString();
 		for (int i = wordIndex_[currIndex_]; i < wordIndices.size(); i++) {
 			if (usedIndices_[wordIndices[i]])						    continue;
@@ -89,15 +108,18 @@ void SolverService::StartSolving()
 
 void SolverService::PrintEvery(chrono::milliseconds ms) const {
 	if (IsReady())return;
-	cross_.printASCII();
+	cross_.PrintASCII();
 	this_thread::sleep_for(ms);
 }
 
 void SolverService::Listen()
 {
+	auto intersperser = chrono::milliseconds(10);
 	string command;
-	while (1) {
+	while (!IsReady()) {
+		this_thread::sleep_for(intersperser);
 		getline(cin, command);
+		
 		if (command == "e" || command == "exit") {
 
 		}else	
@@ -113,14 +135,14 @@ void SolverService::Listen()
 void SolverService::UpdateValue(int posIndex)
 {
 	double val =
-		(double)100.0 / (dict_.GetMem(cross_.areas[posIndex].dictIndex).size() / cross_.areas[posIndex].letters.size());
+		(double)100.0 / (dict_.GetMem(cross_.areas_[posIndex].dictIndex_).size() / cross_.areas_[posIndex].letters_.size());
 	segTree_.Modify(posIndex, val);
 }
 
 bool SolverService::TestPut(int posIndex, unsigned short wordIndex)
 {
-	string & w = dict_.allWords[wordIndex];
-	vector<unsigned char*> & letters = cross_.areas[posIndex].letters;
+	string & w = dict_.allWords_[wordIndex];
+	vector<unsigned char*> & letters = cross_.areas_[posIndex].letters_;
 	vector<unsigned char> backup(letters.size());
 	vector<int> dictBackup(letters.size(),-1);
  
@@ -129,18 +151,18 @@ bool SolverService::TestPut(int posIndex, unsigned short wordIndex)
 		if (*letters[i] != w[i]) {
 			*letters[i] = w[i];
 			if (neighbors_[posIndex][i] != -1) {
-				dictBackup[i] = cross_.areas[neighbors_[posIndex][i]].dictIndex;
-				int newDictIndex = dict_.GetDictIndex(cross_.areas[neighbors_[posIndex][i]].ToString());
+				dictBackup[i] = cross_.areas_[neighbors_[posIndex][i]].dictIndex_;
+				int newDictIndex = dict_.GetDictIndex(cross_.areas_[neighbors_[posIndex][i]].ToString());
 				if (newDictIndex == -1) {
 					for (; i >= 0; i--) {
 						*letters[i] = backup[i];
 						if (neighbors_[posIndex][i] != -1) 
-							cross_.areas[neighbors_[posIndex][i]].dictIndex = dictBackup[i];
+							cross_.areas_[neighbors_[posIndex][i]].dictIndex_ = dictBackup[i];
 					}
 					return false;
 				}
 				else {
-					cross_.areas[neighbors_[posIndex][i]].dictIndex = newDictIndex;
+					cross_.areas_[neighbors_[posIndex][i]].dictIndex_ = newDictIndex;
 				}
 			}
 		}
@@ -157,13 +179,13 @@ bool SolverService::TestPut(int posIndex, unsigned short wordIndex)
 
 bool SolverService::TestPut(int posIndex, string& w)
 {
-	vector<unsigned char*>& letters = cross_.areas[posIndex].letters;
+	vector<unsigned char*>& letters = cross_.areas_[posIndex].letters_;
 
 	for (int i = 0; i < letters.size(); i++) {
 		if (*letters[i] != w[i]) {
 			*letters[i] = w[i];
 			if (neighbors_[posIndex][i] != -1) {
-				cross_.areas[neighbors_[posIndex][i]].dictIndex = dict_.GetDictIndex(cross_.areas[neighbors_[posIndex][i]].ToString());
+				cross_.areas_[neighbors_[posIndex][i]].dictIndex_ = dict_.GetDictIndex(cross_.areas_[neighbors_[posIndex][i]].ToString());
 				UpdateValue(neighbors_[posIndex][i]);
 			}
 		}

@@ -12,36 +12,36 @@
 #include "Position.h"
 using namespace std;
 
-using uc = unsigned char;
+typedef unsigned char uc;
 
 class Crossword
 {
-	void loadWords();
+	void LoadWords();
 public:
-	bool isBox(uc c) const {
+	bool IsBox(uc c) const {
 		return c == boxChar || c == sboxChar;
 	}
-	bool isBox(int i, int j) const {
-		return board[i][j] == boxChar || board[i][j] == sboxChar;
+	bool IsBox(int i, int j) const {
+		return board_[i][j] == boxChar || board_[i][j] == sboxChar;
 	}
-	void printASCII() const;
-	void load(string path);
-	void save(string path = "");
+	void PrintASCII() const;
+	void Load(string path);
+	void Save(string path = "");
 	Crossword();
 	~Crossword();
 
-	string name;
+	string name_;
 	char N = 0, M = 0;
 
-	vector<vector<uc>> board;
-	vector<Position> areas;
+	vector<vector<uc>> board_;
+	vector<Position> areas_;
 
 	Crossword& operator=(const Crossword& cpy) {
-		this->name = cpy.name;
+		this->name_ = cpy.name_;
 		this->N = cpy.N;
 		this->M = cpy.M;
-		this->board = cpy.board;
-		this->areas = cpy.areas;
+		this->board_ = cpy.board_;
+		this->areas_ = cpy.areas_;
 		return *this;
 	}
 };

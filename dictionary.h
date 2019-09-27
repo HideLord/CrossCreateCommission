@@ -20,11 +20,11 @@ public:
 	int GetDictIndex(string s);
 	static int levenstein(string a, string b);
 public:
-	vector<vector<unsigned short>> mem;
-	unordered_map<string, int> stringToDictIndex;
-	unordered_map<string, string> explanationDict;
-	unordered_map<string, string> dirtyDict;
-	vector<string> allWords;
+	vector<vector<unsigned short>> mem_;
+	unordered_map<string, int> stringToDictIndex_;
+	unordered_map<string, string> explanationDict_;
+	unordered_map<string, string> dirtyDict_;
+	vector<string> allWords_;
 	void loadDict();
 	Dictionary();
 	~Dictionary();

@@ -1,49 +1,49 @@
 #include "crossword.h"
 
-void Crossword::loadWords(){
-	areas.clear();
+void Crossword::LoadWords(){
+	areas_.clear();
 	for (int i = 0; i < N; ++i) {
 		for (int j = 0; j < M; ++j) {
 			int start = j;
-			for (; j < M && !isBox(i, j); ++j);
+			for (; j < M && !IsBox(i, j); ++j);
 			if (j - start <= 1) continue;
 			Position newPos;
-			newPos.hor = 1;
-			for (; start < j; ++start)newPos.letters.push_back( &board[i][start] );
-			areas.push_back(newPos);
+			newPos.isHor_ = 1;
+			for (; start < j; ++start)newPos.letters_.push_back( &board_[i][start] );
+			areas_.push_back(newPos);
 		}
 	}
 
 	for (int j = 0; j < M; ++j) {
 		for (int i = 0; i < N; ++i) {
 			int start = i;
-			for (; i < N && !isBox(i, j); ++i);
+			for (; i < N && !IsBox(i, j); ++i);
 			if (i - start <= 1) continue;
 			Position newPos;
-			newPos.hor = 0;
-			for (; start < i; ++start)newPos.letters.push_back( &board[start][j] );
-			areas.push_back(newPos);
+			newPos.isHor_ = 0;
+			for (; start < i; ++start)newPos.letters_.push_back( &board_[start][j] );
+			areas_.push_back(newPos);
 		}
 	}
 }
 
-void Crossword::printASCII() const {
-	if (name.empty())return;
+void Crossword::PrintASCII() const {
+	if (name_.empty())return;
 	if (N == 0 || M == 0)return;
 	for (int i = 0; i < N; i++) {
 		for (int j = 0; j < M; j++) {
-			if (isBox(i, j)) {
+			if (IsBox(i, j)) {
 				cout << (j != 0 ? " " : "") << "|";
 			}
 			else {
-				cout << (j != 0 ? " " : "") << board[i][j];
+				cout << (j != 0 ? " " : "") << board_[i][j];
 			}
 		}
 		cout << endl;
 	}
 }
 
-void Crossword::load(string path){
+void Crossword::Load(string path){
 	while (path.size() < 5) {
 		cout << "Invalid path. Try again:" << endl;
 		cin >> path;
@@ -59,29 +59,29 @@ void Crossword::load(string path){
 			path += ".ctb";
 		fin.open(path, ios::binary);
 	}
-	name = path.substr(0, path.size() - 4);
+	name_ = path.substr(0, path.size() - 4);
 	fin.get(N);
 	fin.get(M);
 	for (int i = 0; i < N; i++) {
-		board.push_back(vector<uc>());
-		for (int j = 0; j < M; j++)board[i].push_back('0');
+		board_.push_back(vector<uc>());
+		for (int j = 0; j < M; j++)board_[i].push_back('0');
 	}
 	for (int i = 0; i < N; i++) {
 		for (int j = 0; j < M; j++) {
 			char c;
 			fin.get(c);
-			board[i][j] = uc(c);
-			if (uc(board[i][j] + 64) >= cyrillicA)board[i][j] += 64;
-			cout << (isBox(board[i][j]) ? uc('|') : board[i][j]) << " ";
+			board_[i][j] = uc(c);
+			if (uc(board_[i][j] + 64) >= cyrillicA)board_[i][j] += 64;
+			cout << (IsBox(board_[i][j]) ? uc('|') : board_[i][j]) << " ";
 		}
 		cout << endl;
 	}
-	loadWords();
+	LoadWords();
 }
 
-void Crossword::save(string path){
+void Crossword::Save(string path){
 	if (path.empty()) {
-		path = name + ".ctb";
+		path = name_ + ".ctb";
 	}
 	ofstream fout(path,ios::binary);
 
@@ -89,12 +89,12 @@ void Crossword::save(string path){
 	fout << M;
 	for (int i = 0; i < N; i++) {
 		for (int j = 0; j < M; j++) {
-			if(uc(board[i][j])>=cyrillicA)fout << uc(board[i][j] - 64);
-			else fout << board[i][j];
+			if(uc(board_[i][j])>=cyrillicA)fout << uc(board_[i][j] - 64);
+			else fout << board_[i][j];
 		}
 	}
-	name = path;
-	cout << "Saved successfully at " << name << "." << endl;
+	name_ = path;
+	cout << "Saved successfully at " << name_ << "." << endl;
 }
 
 Crossword::Crossword()

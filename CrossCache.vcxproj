@@ -154,6 +154,7 @@
     <ClInclude Include="dictionary.h" />
     <ClInclude Include="ISolver.h" />
     <ClInclude Include="Position.h" />
+    <ClInclude Include="SegTree.h" />
     <ClInclude Include="SolverService.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

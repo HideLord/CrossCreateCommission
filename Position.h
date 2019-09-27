@@ -6,18 +6,18 @@ typedef unsigned char uc;
 
 class Position {
 public:
-	vector<uc*> letters;
-	bool hor;
-	int dictIndex = -1;
+	vector<uc*> letters_;
+	bool isHor_;
+	int dictIndex_ = -1;
 	string ToString() const{
-		string res(letters.size(), 0);
-		for (size_t i = 0; i < letters.size(); i++)
-			res[i] = *letters[i];
+		string res(letters_.size(), 0);
+		for (size_t i = 0; i < letters_.size(); i++)
+			res[i] = *letters_[i];
 		return res;
 	}
 	inline string operator=(string S) {
-		for (size_t i = 0; i < letters.size(); i++)
-			*letters[i] = S[i];
+		for (size_t i = 0; i < letters_.size(); i++)
+			*letters_[i] = S[i];
 		return S;
 	}
 };

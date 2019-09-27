@@ -5,12 +5,12 @@
 int Dictionary::process(string s)
 {
 	vector<unsigned short> V;
-	for (int i = 0; i < allWords.size(); i++) {
-		if (s.size() != allWords[i].size())continue;
+	for (int i = 0; i < allWords_.size(); i++) {
+		if (s.size() != allWords_[i].size())continue;
 		bool add = true;
 		for (int j = 0; j < s.size(); j++) {
 			if (s[j] == emptyChar)continue;
-			if (s[j] != allWords[i][j]) {
+			if (s[j] != allWords_[i][j]) {
 				add = false;
 				break;
 			}
@@ -18,22 +18,22 @@ int Dictionary::process(string s)
 		if (add) V.push_back(i);
 	}
 	if (V.empty())return -1;
-	mem.push_back(V);
-	return mem.size() - 1;
+	mem_.push_back(V);
+	return mem_.size() - 1;
 }
 
 vector<unsigned short>& Dictionary::GetMem(int dictIndex){
 	assert(dictIndex >= 0);
-	return mem[dictIndex];
+	return mem_[dictIndex];
 }
 
 int Dictionary::GetDictIndex(string s)
 {
-	if (stringToDictIndex.count(s)) {
-		return stringToDictIndex[s];
+	if (stringToDictIndex_.count(s)) {
+		return stringToDictIndex_[s];
 	}
 	else {
-		return stringToDictIndex[s] = process(s);
+		return stringToDictIndex_[s] = process(s);
 	}
 }
 
@@ -57,8 +57,7 @@ void Dictionary::loadDict() {
 	fin.open("Z:\\Cross\\BIGDICT.TXT");
 	if(!fin.good()) fin.open("BIGDICT.txt");
 	if (!fin.good()) {
-		cout << "Failed to load dictionary: could not open file!" << endl;
-		return;
+		throw "Failed to load dictionary: could not open file!";
 	}
 	string w, expl;
 	while (getline(fin, w, '\t')) {
@@ -75,9 +74,9 @@ void Dictionary::loadDict() {
 			if (c >= cyrillicA - 96 && c < cyrillicA - 32)c += 64;
 			expl[i] = c;
 		}
-		dirtyDict[clean] = w;
-		explanationDict[clean] = expl;
-		allWords.push_back(clean);
+		dirtyDict_[clean] = w;
+		explanationDict_[clean] = expl;
+		allWords_.push_back(clean);
 	}
 	fin.close();
 }

@@ -1,11 +1,25 @@
 #include <iostream>
+#include "crossword.h"
+#include "ISolver.h"
+#include "SolverService.h"
+#define NOMINMAX
+#include <Windows.h>
 
 using namespace std;
 
-int main() {
-	unsigned int p = -1;
-	cout << p << endl;
+Crossword unsolved;
+SolverService Solver;
 
-	unsigned int d = (1ul<<31);
-	cout << d << endl;
+int main() {
+	SetConsoleCP(1251);
+	SetConsoleOutputCP(1251);
+
+	cin.tie(0);
+	cout.tie(0);
+	ios_base::sync_with_stdio(false);
+
+	unsolved.Load("Z:/Cross/xmn6875.ctb");
+	unsolved.PrintASCII();
+
+	unsolved = Solver.Solve(unsolved);
 }
