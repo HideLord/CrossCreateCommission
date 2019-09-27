@@ -15,7 +15,7 @@ class SolverService : ISolver {
 public:
 	virtual Crossword Solve(Crossword unsolved) override;
 private:
-	int numPositions_, currIndex_, currPen_, penThreshold_, numCompleted_;
+	int numPositions_, currIndex_, currPen_, penThreshold_, numCompleted_, numIterations_;
 #ifdef BITCOMPLETE
 	unsigned int isComplete_[15]; // bitset 15*32 = 480 word limit
 #else

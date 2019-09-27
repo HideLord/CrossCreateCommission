@@ -4,26 +4,39 @@
 
 int Dictionary::process(string s)
 {
-	vector<unsigned short> V;
-	for (int i = 0; i < allWords_.size(); i++) {
-		if (s.size() != allWords_[i].size())continue;
+	mem_.push_back(vector<unsigned short>());
+	size_t sz = s.size();
+	vector<unsigned short>& appropriate =
+		sortedWordIndice_[uc(s[0])][uc(s[1])][sz];
+	for (size_t k = 0; k < appropriate.size(); k++) {
+		unsigned short i = appropriate[k];
 		bool add = true;
-		for (int j = 0; j < s.size(); j++) {
+		for (int j = 0; j < sz; j++) {
 			if (s[j] == emptyChar)continue;
 			if (s[j] != allWords_[i][j]) {
 				add = false;
 				break;
 			}
 		}
-		if (add) V.push_back(i);
+		if (add) mem_.back().push_back(i);
 	}
-	if (V.empty())return -1;
-	mem_.push_back(V);
+	if (mem_.back().empty()) {
+		mem_.pop_back();
+		return -1;
+	}
 	return mem_.size() - 1;
 }
 
+void Dictionary::AddSorted(unsigned short index){
+	if (allWords_[index].size() < 2)return;
+	size_t sz = allWords_[index].size();
+	sortedWordIndice_[uc(allWords_[index][0])][uc(allWords_[index][1])][sz].push_back(index);
+	sortedWordIndice_[uc(emptyChar)][uc(emptyChar)][sz].push_back(index);
+	sortedWordIndice_[uc(allWords_[index][0])][uc(emptyChar)][sz].push_back(index);
+	sortedWordIndice_[uc(emptyChar)][uc(allWords_[index][1])][sz].push_back(index);
+}
+
 vector<unsigned short>& Dictionary::GetMem(int dictIndex){
-	assert(dictIndex >= 0);
 	return mem_[dictIndex];
 }
 
@@ -39,8 +52,8 @@ int Dictionary::GetDictIndex(string s)
 
 int Dictionary::levenstein(string a, string b) {
 	vector<vector<int>> dp(a.length()+1, vector<int>(b.length()+1, 0));
-	for (int i = 0; i <= a.length(); i++) {
-		for (int j = 0; j <= b.length(); j++) {
+	for (size_t i = 0; i <= a.length(); i++) {
+		for (size_t j = 0; j <= b.length(); j++) {
 			if (min(i,j) == 0)dp[i][j] = 0;
 			else {
 				dp[i][j] = min(dp[i - 1][j] + 1, dp[i][j - 1] + 1);
@@ -77,6 +90,7 @@ void Dictionary::loadDict() {
 		dirtyDict_[clean] = w;
 		explanationDict_[clean] = expl;
 		allWords_.push_back(clean);
+		AddSorted(allWords_.size()-1);
 	}
 	fin.close();
 }

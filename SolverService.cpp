@@ -1,5 +1,6 @@
 #include "SolverService.h"
 #include <functional>
+#include <iomanip>
 #include <Chrono>
 #include <wtypes.h>
 
@@ -58,8 +59,7 @@ void SolverService::Prepare()
 		}
 	}
 
-	numCompleted_ = 0;
-	std::memset(isCompleteB_, 0, sizeof isCompleteB_);
+	numIterations_ = 0;
 
 	currIndex_ = -1;
 
@@ -72,7 +72,12 @@ void SolverService::Prepare()
 
 	std::memset(wordIndex_, 0, sizeof wordIndex_);
 
-	//std::memset(isComplete_, 0, sizeof isComplete_);
+#ifdef BITCOMPLETE
+	std::memset(isComplete_, 0, sizeof isComplete_);
+#else
+	numCompleted_ = 0;
+	std::memset(isCompleteB_, 0, sizeof isCompleteB_);
+#endif
 
 	std::memset(positionIndices_, 0, sizeof positionIndices_);
 
@@ -101,6 +106,7 @@ void SolverService::Prepare()
 void SolverService::StartSolving() 
 {
 	while (numCompleted_ != numPositions_) {
+		++numIterations_;
 		if (currIndex_ == -1)currIndex_ = 0, positionIndices_[0] = GetNextPosIndex();
 		Position& currPos = cross_.areas_[positionIndices_[currIndex_]];
 		vector<unsigned short>& wordIndices = dict_.GetMem(currPos.dictIndex_);
@@ -108,7 +114,7 @@ void SolverService::StartSolving()
 			prevState_[currIndex_] = currPos.ToString();
 		}
 		else {
-			usedIndices_[wordIndices[wordIndex_[currIndex_]-1]] = 0;
+			usedIndices_[wordIndices[wordIndex_[currIndex_]-(unsigned short)1]] = false;
 		}
 
 		for (int i = wordIndex_[currIndex_]; i < wordIndices.size(); i++) {
@@ -138,6 +144,7 @@ void SolverService::PrintEvery(chrono::milliseconds ms) const {
 		SetConsoleCursorPosition(output, pos);
 
 		cross_.PrintASCII();
+		cout << "Num Iterations: " << numIterations_ << setw(10) << "\n";
 		this_thread::sleep_for(ms);
 	} while (!IsReady());
 	COORD pos = { 0, 0 };
