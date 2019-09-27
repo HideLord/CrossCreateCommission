@@ -7,9 +7,18 @@ const int MaxSegTreeSize = 10000;
 
 template <int N, typename T> class SegTree {
 	T t[MaxSegTreeSize * 2];
+	int maxInd[MaxSegTreeSize * 2];
 public:
-	void Modify(int p, T value) {  // set value at position p
+	void ModifyVal(int p, T value) {  // set value at position p
 		for (t[p += N] = value; p > 1; p >>= 1) t[p >> 1] = max(t[p], t[p ^ 1]);
+	}
+	void ModifyMax(int p, T value) {
+		p += N;
+		maxInd[p] = p;
+		for (t[p] = value; p > 1; p >>= 1) {
+			t[p >> 1] = max(t[p], t[p ^ 1]);
+			maxInd[p >> 1] = (t[p] > t[p ^ 1] ? maxInd[p] : maxInd[p ^ 1]);
+		}
 	}
 	T Query(int l, int r) const {  // max from interval [l, r)
 		T res = T();
@@ -20,11 +29,17 @@ public:
 		return res;
 	}
 	int QueryInd(int l, int r) const {
-		int res = l+N+1;
+		T res = T();
+		int ind = l+N;
 		for (l += N, r += N; l < r; l >>= 1, r >>= 1) {
-			if (l & 1) res = (t[res] > t[l++]?res:l-1);
-			if (r & 1) res = (t[res] > t[--r]?res:r);
+			if (l & 1) {
+				if (res < t[l])res = t[l], ind = maxInd[l];
+				++l;
+			}
+			if (r & 1) {
+				if (res < t[--r])res = t[r], ind = maxInd[r];
+			}
 		}
-		return res;
+		return ind - N;
 	}
 };

@@ -24,9 +24,8 @@ Crossword SolverService::Solve(Crossword unsolved)
 
 	cout << "Starting to solve..." << endl;
 	StartSolving();
+	if (printer_thread.joinable()) printer_thread.join();
 	cout << "Solved" << endl;
-
-	if(printer_thread.joinable()) printer_thread.join();
 
 	return cross_;
 }
@@ -42,6 +41,7 @@ void SolverService::Prepare()
 	}
 	numPositions_ = cross_.areas_.size();
 
+	memset(neighbors_, -1, sizeof neighbors_);
 	auto checkForSamePointer = [&](Position& A, Position& B) ->int const {
 		if (A.isHor_ == B.isHor_)return -1;
 		for (int i = 0; i < A.letters_.size(); i++)
@@ -58,6 +58,9 @@ void SolverService::Prepare()
 		}
 	}
 
+	numCompleted_ = 0;
+	std::memset(isCompleteB_, 0, sizeof isCompleteB_);
+
 	currIndex_ = -1;
 
 	currPen_ = 0;
@@ -69,7 +72,7 @@ void SolverService::Prepare()
 
 	std::memset(wordIndex_, 0, sizeof wordIndex_);
 
-	std::memset(isComplete_, 0, sizeof isComplete_);
+	//std::memset(isComplete_, 0, sizeof isComplete_);
 
 	std::memset(positionIndices_, 0, sizeof positionIndices_);
 
@@ -80,38 +83,48 @@ void SolverService::Prepare()
 	};
 	for (int i = 0; i < cross_.areas_.size(); i++) {
 		if (checkIfComplete(cross_.areas_[i])) {
+#ifdef BITCOMPLETE
 			isComplete_[i / 32] |= (1 << (i % 32));
-			segTree_.Modify(i, -1);
+#else // BITCOMPLETE
+			numCompleted_ += 1;
+			isCompleteB_[i] = true;
+#endif
 		}
 		else {
 			cross_.areas_[i].dictIndex_ = 
 				dict_.GetDictIndex(cross_.areas_[i].ToString());
-			UpdateValue(i);
 		}
+		UpdateValue(i);
 	}
 }
 
 void SolverService::StartSolving() 
 {
-	while (!IsReady()) {
-		this_thread::sleep_for(chrono::milliseconds(100));
+	while (numCompleted_ != numPositions_) {
 		if (currIndex_ == -1)currIndex_ = 0, positionIndices_[0] = GetNextPosIndex();
 		Position& currPos = cross_.areas_[positionIndices_[currIndex_]];
 		vector<unsigned short>& wordIndices = dict_.GetMem(currPos.dictIndex_);
-		if (wordIndex_[currIndex_] == 0)prevState_[currIndex_] = currPos.ToString();
+		if (wordIndex_[currIndex_] == 0) {
+			prevState_[currIndex_] = currPos.ToString();
+		}
+		else {
+			usedIndices_[wordIndices[wordIndex_[currIndex_]-1]] = 0;
+		}
+
 		for (int i = wordIndex_[currIndex_]; i < wordIndices.size(); i++) {
 			if (usedIndices_[wordIndices[i]])						    continue;
 			if (currPen_ + penalty_[wordIndices[i]] >= penThreshold_)   continue;
 			if (!TestPut(positionIndices_[currIndex_], wordIndices[i])) continue;
 
+			wordIndex_[currIndex_] = i+1;
 			currIndex_ += 1;
 			positionIndices_[currIndex_] = GetNextPosIndex();
-			wordIndex_[currIndex_] = i;
+
 			goto beginOperation;
 		}
-		TestPut(positionIndices_[currIndex_],prevState_[currIndex_]);
+
+		Restore(positionIndices_[currIndex_], prevState_[currIndex_]);
 		wordIndex_[currIndex_] = 0;
-		positionIndices_[currIndex_] = -1;
 		currIndex_ -= 1;
 	beginOperation:;
 	}
@@ -119,21 +132,26 @@ void SolverService::StartSolving()
 
 void SolverService::PrintEvery(chrono::milliseconds ms) const {
 	system("cls");
-	while (!IsReady()) {
+	do {
 		COORD pos = { 0, 0 };
 		HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
 		SetConsoleCursorPosition(output, pos);
 
 		cross_.PrintASCII();
 		this_thread::sleep_for(ms);
-	}
+	} while (!IsReady());
+	COORD pos = { 0, 0 };
+	HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
+	SetConsoleCursorPosition(output, pos);
+
+	cross_.PrintASCII();
 }
 
 void SolverService::Listen()
 {
 	auto intersperser = chrono::milliseconds(10);
 	string command;
-	while (!IsReady()) {
+	do {
 		this_thread::sleep_for(intersperser);
 		getline(cin, command);
 		
@@ -146,14 +164,19 @@ void SolverService::Listen()
 		if (command == "e" || command == "edit") {
 
 		}
-	}
+	} while (!IsReady());
 }
 
 void SolverService::UpdateValue(int posIndex)
 {
-	double val =
-		(double)100.0 / (dict_.GetMem(cross_.areas_[posIndex].dictIndex_).size() / cross_.areas_[posIndex].letters_.size());
-	segTree_.Modify(posIndex, val);
+	if (isCompleteB_[posIndex]) {
+		segTree_.ModifyMax(posIndex, -1);
+		return;
+	}
+	double val = 
+		(double)100.0 / (dict_.GetMem(cross_.areas_[posIndex].dictIndex_).size()
+			/ cross_.areas_[posIndex].letters_.size());
+	segTree_.ModifyMax(posIndex, val);
 }
 
 bool SolverService::TestPut(int posIndex, unsigned short wordIndex)
@@ -161,20 +184,22 @@ bool SolverService::TestPut(int posIndex, unsigned short wordIndex)
 	string & w = dict_.allWords_[wordIndex];
 	vector<unsigned char*> & letters = cross_.areas_[posIndex].letters_;
 	vector<unsigned char> backup(letters.size());
-	vector<int> dictBackup(letters.size(),-1);
+	vector<int> dictBackup(letters.size(),-2);
  
 	for (int i = 0; i < backup.size(); i++) {
 		backup[i] = *letters[i];
-		if (*letters[i] != w[i]) {
-			*letters[i] = w[i];
+		if (*letters[i] != uc(w[i])) {
+			*letters[i] = uc(w[i]);
 			if (neighbors_[posIndex][i] != -1) {
 				dictBackup[i] = cross_.areas_[neighbors_[posIndex][i]].dictIndex_;
 				int newDictIndex = dict_.GetDictIndex(cross_.areas_[neighbors_[posIndex][i]].ToString());
 				if (newDictIndex == -1) {
 					for (; i >= 0; i--) {
-						*letters[i] = backup[i];
-						if (neighbors_[posIndex][i] != -1) 
-							cross_.areas_[neighbors_[posIndex][i]].dictIndex_ = dictBackup[i];
+						if (*letters[i] != backup[i]) {
+							*letters[i] = backup[i];
+							if (neighbors_[posIndex][i] != -1)
+								cross_.areas_[neighbors_[posIndex][i]].dictIndex_ = dictBackup[i];
+						}
 					}
 					return false;
 				}
@@ -186,21 +211,38 @@ bool SolverService::TestPut(int posIndex, unsigned short wordIndex)
 	}
 
 	for (int i = 0; i < backup.size(); i++) {
-		if (dictBackup[i] != -1) {
+		if (dictBackup[i] != -2) {
 			UpdateValue(neighbors_[posIndex][i]);
 		}
 	}
 
+#ifdef BITCOMPLETE
+	isComplete_[posIndex / 32] |= (1 << (posIndex % 32));
+#else
+	numCompleted_ += 1;
+	isCompleteB_[posIndex] = true;
+#endif
+	UpdateValue(posIndex);
+
+	usedIndices_[wordIndex] = 1;
+
 	return true;
 }
 
-bool SolverService::TestPut(int posIndex, string& w)
+bool SolverService::Restore(int posIndex, string& w)
 {
+#ifdef BITCOMPLETE
+	isComplete_[posIndex / 32] &= (~(1 << (posIndex % 32)));
+#else // BITCOMPLETE
+	numCompleted_ -= 1;
+	isCompleteB_[posIndex] = false;
+#endif
+
 	vector<unsigned char*>& letters = cross_.areas_[posIndex].letters_;
 
 	for (int i = 0; i < letters.size(); i++) {
-		if (*letters[i] != w[i]) {
-			*letters[i] = w[i];
+		if (*letters[i] != uc(w[i])) {
+			*letters[i] = uc(w[i]);
 			if (neighbors_[posIndex][i] != -1) {
 				cross_.areas_[neighbors_[posIndex][i]].dictIndex_ = dict_.GetDictIndex(cross_.areas_[neighbors_[posIndex][i]].ToString());
 				UpdateValue(neighbors_[posIndex][i]);
@@ -208,17 +250,23 @@ bool SolverService::TestPut(int posIndex, string& w)
 		}
 	}
 
+	UpdateValue(posIndex);
+
 	return true;
 }
 
 bool SolverService::IsReady() const
 {
+#ifdef BITCOMPLETE
 	int temp = numPositions_ - 32, i = 0;
 	for (; temp > 0; temp -= 32, i++) 
 		if ((isComplete_[i] & 0xFFFFFFFF) != 0xFFFFFFFF) // Not every bit in the integer is set
 			return false;
 	if ((1 << (temp + 32)) - 1 != isComplete_[i]) return false;
 	return true;
+#else
+	return numCompleted_ == numPositions_;
+#endif
 }
 
 int SolverService::GetNextPosIndex() const

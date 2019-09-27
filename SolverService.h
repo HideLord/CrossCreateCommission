@@ -1,5 +1,7 @@
 #pragma once
 
+//#define BITCOMPLETE
+
 #include "ISolver.h"
 #include "crossword.h"
 #include "dictionary.h"
@@ -13,8 +15,12 @@ class SolverService : ISolver {
 public:
 	virtual Crossword Solve(Crossword unsolved) override;
 private:
-	int numPositions_, currIndex_, currPen_, penThreshold_;
+	int numPositions_, currIndex_, currPen_, penThreshold_, numCompleted_;
+#ifdef BITCOMPLETE
 	unsigned int isComplete_[15]; // bitset 15*32 = 480 word limit
+#else
+	bool isCompleteB_[480];
+#endif // BITCOMPLETE
 	int wordIndex_[480];
 	int positionIndices_[480];
 	int neighbors_[480][50]; // LengthLimit of a word is 50
@@ -31,7 +37,7 @@ private:
 	void Listen();
 	void UpdateValue(int posIndex);
 	bool TestPut(int posIndex, unsigned short wordIndex);
-	bool TestPut(int posIndex, string & state);
+	bool Restore(int posIndex, string & state);
 	bool IsReady() const;
 	int GetNextPosIndex() const;
 };
