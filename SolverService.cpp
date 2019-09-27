@@ -1,25 +1,26 @@
 #include "SolverService.h"
 #include <functional>
 #include <Chrono>
+#include <wtypes.h>
 
 Crossword SolverService::Solve(Crossword unsolved)
 {
-	cross_ = unsolved;
-
-	thread listener_thread([this]() { Listen(); }); // Listen for outside commands
-	listener_thread.detach();
-
-	thread printer_thread([this]() { PrintEvery(chrono::milliseconds(20)); }); // Print crossword every 20ms
+	cross_.Clone(unsolved);
 
 	try {
 		cout << "Starting to prepare..." << endl;
 		Prepare();
 		cout << "Finished preparing without problems" << endl;
 	}
-	catch (char * exception) {
+	catch (char* exception) {
 		cout << exception << endl;
 		return unsolved;
 	}
+
+	thread listener_thread([this]() { Listen(); }); // Listen for outside commands
+	listener_thread.detach();
+
+	thread printer_thread([this]() { PrintEvery(chrono::milliseconds(20)); }); // Print crossword every 20ms
 
 	cout << "Starting to solve..." << endl;
 	StartSolving();
@@ -57,6 +58,8 @@ void SolverService::Prepare()
 		}
 	}
 
+	currIndex_ = -1;
+
 	currPen_ = 0;
 	penThreshold_ = 150;
 
@@ -71,12 +74,19 @@ void SolverService::Prepare()
 	std::memset(positionIndices_, 0, sizeof positionIndices_);
 
 	auto checkIfComplete = [&](Position& A) ->bool const {
-		for (int i = 0; i < A.letters_.size(); i++)if (*A.letters_[i] == emptyChar)return false;
+		for (int i = 0; i < A.letters_.size(); i++)
+			if (*A.letters_[i] == emptyChar)return false;
 		return true;
 	};
 	for (int i = 0; i < cross_.areas_.size(); i++) {
 		if (checkIfComplete(cross_.areas_[i])) {
 			isComplete_[i / 32] |= (1 << (i % 32));
+			segTree_.Modify(i, -1);
+		}
+		else {
+			cross_.areas_[i].dictIndex_ = 
+				dict_.GetDictIndex(cross_.areas_[i].ToString());
+			UpdateValue(i);
 		}
 	}
 }
@@ -84,7 +94,7 @@ void SolverService::Prepare()
 void SolverService::StartSolving() 
 {
 	while (!IsReady()) {
-	beginOperation:;
+		this_thread::sleep_for(chrono::milliseconds(100));
 		if (currIndex_ == -1)currIndex_ = 0, positionIndices_[0] = GetNextPosIndex();
 		Position& currPos = cross_.areas_[positionIndices_[currIndex_]];
 		vector<unsigned short>& wordIndices = dict_.GetMem(currPos.dictIndex_);
@@ -103,13 +113,20 @@ void SolverService::StartSolving()
 		wordIndex_[currIndex_] = 0;
 		positionIndices_[currIndex_] = -1;
 		currIndex_ -= 1;
+	beginOperation:;
 	}
 }
 
 void SolverService::PrintEvery(chrono::milliseconds ms) const {
-	if (IsReady())return;
-	cross_.PrintASCII();
-	this_thread::sleep_for(ms);
+	system("cls");
+	while (!IsReady()) {
+		COORD pos = { 0, 0 };
+		HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
+		SetConsoleCursorPosition(output, pos);
+
+		cross_.PrintASCII();
+		this_thread::sleep_for(ms);
+	}
 }
 
 void SolverService::Listen()

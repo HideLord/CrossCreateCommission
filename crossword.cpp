@@ -97,6 +97,23 @@ void Crossword::Save(string path){
 	cout << "Saved successfully at " << name_ << "." << endl;
 }
 
+void Crossword::Clear()
+{
+	for (int i = 0; i < N; i++)
+		for (int j = 0; j < M; j++)
+			if (IsBox(i, j))continue;
+			else board_[i][j] = emptyChar;
+}
+
+void Crossword::Clone(const Crossword& cpy)
+{
+	this->name_ = cpy.name_;
+	this->N = cpy.N;
+	this->M = cpy.M;
+	this->board_ = cpy.board_;
+	this->LoadWords();
+}
+
 Crossword::Crossword()
 {
 }

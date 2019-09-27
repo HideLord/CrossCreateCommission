@@ -24,9 +24,13 @@ public:
 	bool IsBox(int i, int j) const {
 		return board_[i][j] == boxChar || board_[i][j] == sboxChar;
 	}
+
 	void PrintASCII() const;
 	void Load(string path);
 	void Save(string path = "");
+	void Clear();
+	void Clone(const Crossword& cpy);
+
 	Crossword();
 	~Crossword();
 
@@ -36,6 +40,7 @@ public:
 	vector<vector<uc>> board_;
 	vector<Position> areas_;
 
+	[[deprecated("Use clone instead")]]
 	Crossword& operator=(const Crossword& cpy) {
 		this->name_ = cpy.name_;
 		this->N = cpy.N;

@@ -19,7 +19,8 @@ int main() {
 	ios_base::sync_with_stdio(false);
 
 	unsolved.Load("Z:/Cross/xmn6875.ctb");
+	unsolved.Clear();
 	unsolved.PrintASCII();
 
-	unsolved = Solver.Solve(unsolved);
+	unsolved.Clone(Solver.Solve(unsolved));
 }
