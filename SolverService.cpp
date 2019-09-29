@@ -109,7 +109,7 @@ void SolverService::StartSolving()
 		++numIterations_;
 		if (currIndex_ == -1)currIndex_ = 0, positionIndices_[0] = GetNextPosIndex();
 		Position& currPos = cross_.areas_[positionIndices_[currIndex_]];
-		vector<unsigned short>& wordIndices = dict_.GetMem(currPos.dictIndex_);
+		vector<unsigned short>& wordIndices = dict_.mem_[currPos.dictIndex_];
 		if (wordIndex_[currIndex_] == 0) {
 			prevState_[currIndex_] = currPos.ToString();
 		}
@@ -180,10 +180,8 @@ void SolverService::UpdateValue(int posIndex)
 		segTree_.ModifyMax(posIndex, -1);
 		return;
 	}
-	double val = 
-		(double)100.0 / (dict_.GetMem(cross_.areas_[posIndex].dictIndex_).size()
-			/ cross_.areas_[posIndex].letters_.size());
-	segTree_.ModifyMax(posIndex, val);
+	segTree_.ModifyMax(posIndex, 
+		(double)cross_.areas_[posIndex].letters_.size() / dict_.mem_[cross_.areas_[posIndex].dictIndex_].size());
 }
 
 bool SolverService::TestPut(int posIndex, unsigned short wordIndex)

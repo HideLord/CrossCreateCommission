@@ -9,13 +9,14 @@ template <int N, typename T> class SegTree {
 	T t[MaxSegTreeSize * 2];
 	int maxInd[MaxSegTreeSize * 2];
 public:
+	SegTree() {
+		for (int i = N; i < 2 * N; i++)maxInd[i] = i;
+	}
 	void ModifyVal(int p, T value) {  // set value at position p
 		for (t[p += N] = value; p > 1; p >>= 1) t[p >> 1] = max(t[p], t[p ^ 1]);
 	}
 	void ModifyMax(int p, T value) {
-		p += N;
-		maxInd[p] = p;
-		for (t[p] = value; p > 1; p >>= 1) {
+		for (t[p += N] = value; p > 1; p >>= 1) {
 			t[p >> 1] = max(t[p], t[p ^ 1]);
 			maxInd[p >> 1] = (t[p] > t[p ^ 1] ? maxInd[p] : maxInd[p ^ 1]);
 		}
