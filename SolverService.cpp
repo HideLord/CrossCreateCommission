@@ -33,6 +33,8 @@ Crossword SolverService::Solve(Crossword unsolved)
 
 void SolverService::Prepare()
 {
+	srand(time(0));
+
 	try {
 		dict_.loadDict();
 	}
@@ -42,7 +44,8 @@ void SolverService::Prepare()
 	}
 	numPositions_ = cross_.areas_.size();
 
-	memset(neighbors_, -1, sizeof neighbors_);
+	std::memset(neighbors_, -1, sizeof neighbors_);
+	std::memset(areNeighbors_, 0, sizeof areNeighbors_);
 	auto checkForSamePointer = [&](Position& A, Position& B) ->int const {
 		if (A.isHor_ == B.isHor_)return -1;
 		for (int i = 0; i < A.letters_.size(); i++)
@@ -53,9 +56,13 @@ void SolverService::Prepare()
 	};
 	for (int i = 0; i < cross_.areas_.size(); i++) {
 		for (int j = 0; j < cross_.areas_.size(); j++) {
+			if(i==j)
+				continue;
+
 			int res = checkForSamePointer(cross_.areas_[i], cross_.areas_[j]);
 			if (res == -1)continue;
 			neighbors_[i][res] = j;
+			areNeighbors_[i][j] = true;
 		}
 	}
 
@@ -78,6 +85,8 @@ void SolverService::Prepare()
 	numCompleted_ = 0;
 	std::memset(isCompleteB_, 0, sizeof isCompleteB_);
 #endif
+
+	std::memset(usedWordIndex_, 0, sizeof usedWordIndex_);
 
 	std::memset(positionIndices_, 0, sizeof positionIndices_);
 
@@ -107,6 +116,7 @@ void SolverService::StartSolving()
 {
 	while (numCompleted_ != numPositions_) {
 		++numIterations_;
+		if (numIterations_ % 1000000 == 999999)Reset();
 		if (currIndex_ == -1)currIndex_ = 0, positionIndices_[0] = GetNextPosIndex();
 		Position& currPos = cross_.areas_[positionIndices_[currIndex_]];
 		vector<unsigned short>& wordIndices = dict_.mem_[currPos.dictIndex_];
@@ -114,7 +124,7 @@ void SolverService::StartSolving()
 			prevState_[currIndex_] = currPos.ToString();
 		}
 		else {
-			usedIndices_[wordIndices[wordIndex_[currIndex_]-(unsigned short)1]] = false;
+			usedIndices_[usedWordIndex_[currIndex_]] = false;
 		}
 
 		for (int i = wordIndex_[currIndex_]; i < wordIndices.size(); i++) {
@@ -122,28 +132,31 @@ void SolverService::StartSolving()
 			if (currPen_ + penalty_[wordIndices[i]] >= penThreshold_)   continue;
 			if (!TestPut(positionIndices_[currIndex_], wordIndices[i])) continue;
 
+			usedWordIndex_[currIndex_] = wordIndices[i];
 			wordIndex_[currIndex_] = i+1;
 			currIndex_ += 1;
 			positionIndices_[currIndex_] = GetNextPosIndex();
 
 			goto beginOperation;
 		}
-
-		Restore(positionIndices_[currIndex_], prevState_[currIndex_]);
-		wordIndex_[currIndex_] = 0;
-		currIndex_ -= 1;
+		SkipBack();
 	beginOperation:;
 	}
 }
 
 void SolverService::PrintEvery(chrono::milliseconds ms) const {
 	system("cls");
+	auto currSecond = time(0);
+	int stepsPerSecond = 0;
+	int prevIterations = 0;
 	do {
 		COORD pos = { 0, 0 };
 		HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
 		SetConsoleCursorPosition(output, pos);
 
 		cross_.PrintASCII();
+		if (currSecond != time(0))stepsPerSecond = numIterations_ - prevIterations, prevIterations = numIterations_, currSecond = time(0);
+		cout << "Iter/Sec      : " << stepsPerSecond << setw(10) << "\n";
 		cout << "Num Iterations: " << numIterations_ << setw(10) << "\n";
 		this_thread::sleep_for(ms);
 	} while (!IsReady());
@@ -180,8 +193,36 @@ void SolverService::UpdateValue(int posIndex)
 		segTree_.ModifyMax(posIndex, -1);
 		return;
 	}
-	segTree_.ModifyMax(posIndex, 
-		(double)cross_.areas_[posIndex].letters_.size() / dict_.mem_[cross_.areas_[posIndex].dictIndex_].size());
+
+	int sz = cross_.areas_[posIndex].letters_.size();
+
+
+
+	segTree_.ModifyMax(posIndex,
+		(double)sz / log(dict_.mem_[cross_.areas_[posIndex].dictIndex_].size()));
+}
+
+void SolverService::Reset()
+{
+	for (; currIndex_ > -1; currIndex_--) {
+		usedIndices_[usedWordIndex_[currIndex_]] = false;
+		Restore(positionIndices_[currIndex_], prevState_[currIndex_]);
+		wordIndex_[currIndex_] = 0;
+	}
+	for (int i = 0; i < dict_.sizeCounter_; i++) {
+		random_shuffle(dict_.mem_[i].begin(), dict_.mem_[i].end());
+	}
+}
+
+void SolverService::SkipBack()
+{
+	int skipBackTo = currIndex_-1;
+	while (!areNeighbors_[positionIndices_[skipBackTo]][positionIndices_[currIndex_]] && skipBackTo >= 0) --skipBackTo;
+	for ( ;currIndex_ > skipBackTo; currIndex_--) {
+		usedIndices_[usedWordIndex_[currIndex_]] = false;
+		Restore(positionIndices_[currIndex_], prevState_[currIndex_]);
+		wordIndex_[currIndex_] = 0;
+	}
 }
 
 bool SolverService::TestPut(int posIndex, unsigned short wordIndex)

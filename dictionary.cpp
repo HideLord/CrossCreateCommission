@@ -4,7 +4,6 @@
 
 int Dictionary::process(string s)
 {
-	mem_.push_back(vector<unsigned short>());
 	size_t sz = s.size();
 	vector<unsigned short>& appropriate =
 		sortedWordIndice_[uc(s[0])][uc(s[1])][sz];
@@ -18,13 +17,11 @@ int Dictionary::process(string s)
 				break;
 			}
 		}
-		if (add) mem_.back().push_back(i);
+		if (add) mem_[sizeCounter_].push_back(i);
 	}
-	if (mem_.back().empty()) {
-		mem_.pop_back();
+	if (mem_[sizeCounter_].empty()) 
 		return -1;
-	}
-	return mem_.size() - 1;
+	return sizeCounter_++;
 }
 
 void Dictionary::AddSorted(unsigned short index){
@@ -90,9 +87,10 @@ void Dictionary::loadDict() {
 		dirtyDict_[clean] = w;
 		explanationDict_[clean] = expl;
 		allWords_.push_back(clean);
-		AddSorted(allWords_.size()-1);
 	}
 	fin.close();
+	random_shuffle(allWords_.begin(), allWords_.end());
+	for (int i = 0; i < allWords_.size(); i++)AddSorted(i);
 }
 
 Dictionary::Dictionary()
