@@ -21,7 +21,7 @@ Crossword SolverService::Solve(Crossword unsolved)
 	thread listener_thread([this]() { Listen(); }); // Listen for outside commands
 	listener_thread.detach();
 
-	thread printer_thread([this]() { PrintEvery(chrono::milliseconds(20)); }); // Print crossword every 20ms
+	thread printer_thread([this]() { PrintEvery(chrono::milliseconds(200)); }); // Print crossword every 20ms
 
 	cout << "Starting to solve..." << endl;
 	StartSolving();
@@ -116,7 +116,7 @@ void SolverService::StartSolving()
 {
 	while (numCompleted_ != numPositions_) {
 		++numIterations_;
-		if (numIterations_ % 1000000 == 999999)Reset();
+		if (numIterations_ % 1000000 == 0)Reset();
 		if (currIndex_ == -1)currIndex_ = 0, positionIndices_[0] = GetNextPosIndex();
 		Position& currPos = cross_.areas_[positionIndices_[currIndex_]];
 		vector<unsigned short>& wordIndices = dict_.mem_[currPos.dictIndex_];
@@ -127,13 +127,13 @@ void SolverService::StartSolving()
 			usedIndices_[usedWordIndex_[currIndex_]] = false;
 		}
 
-		for (int i = wordIndex_[currIndex_]; i < wordIndices.size(); i++) {
+		for (int &i = wordIndex_[currIndex_]; i < wordIndices.size(); i++) {
 			if (usedIndices_[wordIndices[i]])						    continue;
 			if (currPen_ + penalty_[wordIndices[i]] >= penThreshold_)   continue;
 			if (!TestPut(positionIndices_[currIndex_], wordIndices[i])) continue;
 
 			usedWordIndex_[currIndex_] = wordIndices[i];
-			wordIndex_[currIndex_] = i+1;
+			i += 1;
 			currIndex_ += 1;
 			positionIndices_[currIndex_] = GetNextPosIndex();
 
@@ -190,25 +190,30 @@ void SolverService::Listen()
 void SolverService::UpdateValue(int posIndex)
 {
 	if (isCompleteB_[posIndex]) {
-		segTree_.ModifyMax(posIndex, -1);
+		segTree_.update(posIndex, -1);
 		return;
 	}
 
 	int sz = cross_.areas_[posIndex].letters_.size();
 
-
-
-	segTree_.ModifyMax(posIndex,
+	segTree_.update(posIndex,
 		(double)sz / log(dict_.mem_[cross_.areas_[posIndex].dictIndex_].size()));
 }
 
-void SolverService::Reset()
-{
+void SolverService::Reset(){
 	for (; currIndex_ > -1; currIndex_--) {
+		if (wordIndex_[currIndex_] == 0)continue;
 		usedIndices_[usedWordIndex_[currIndex_]] = false;
 		Restore(positionIndices_[currIndex_], prevState_[currIndex_]);
 		wordIndex_[currIndex_] = 0;
 	}
+
+	numCompleted_ = 0;
+	for (int i = 0; i < cross_.areas_.size(); i++) {
+		cross_.areas_[i].dictIndex_ =
+			dict_.GetDictIndex(cross_.areas_[i].ToString());
+	}
+
 	for (int i = 0; i < dict_.sizeCounter_; i++) {
 		random_shuffle(dict_.mem_[i].begin(), dict_.mem_[i].end());
 	}
@@ -317,5 +322,5 @@ bool SolverService::IsReady() const
 
 int SolverService::GetNextPosIndex() const
 {
-	return segTree_.QueryInd(0, numPositions_);
+	return segTree_.get();
 }

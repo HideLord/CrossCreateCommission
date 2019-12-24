@@ -9,6 +9,7 @@
 #include <string.h>
 #include <unordered_map>
 #include <unordered_set>
+#include "robin_hood.h"
 using namespace std;
 
 class Dictionary
@@ -27,9 +28,9 @@ public:
 	vector<unsigned short> sortedWordIndice_[256][256][50];
 	vector<unsigned short> mem_[1000000];
 
-	unordered_map<string, int> stringToDictIndex_;
-	unordered_map<string, string> explanationDict_;
-	unordered_map<string, string> dirtyDict_;
+	robin_hood::unordered_node_map<string, int> stringToDictIndex_;
+	robin_hood::unordered_node_map<string, string> explanationDict_;
+	robin_hood::unordered_node_map<string, string> dirtyDict_;
 
 	vector<string> allWords_;
 

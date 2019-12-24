@@ -31,6 +31,7 @@ private:
 	string prevState_[480];
 	SegTree<1024, double> segTree_;
 	Crossword cross_;
+	Crossword restoreCross_;
 	Dictionary dict_;
 private:
 	void Prepare();

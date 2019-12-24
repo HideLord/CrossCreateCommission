@@ -2,8 +2,7 @@
 #include "Constants.h"
 #include <cassert>
 
-int Dictionary::process(string s)
-{
+int Dictionary::process(string s){
 	size_t sz = s.size();
 	vector<unsigned short>& appropriate =
 		sortedWordIndice_[uc(s[0])][uc(s[1])][sz];

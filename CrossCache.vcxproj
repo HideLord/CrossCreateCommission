@@ -156,6 +156,7 @@
     <ClInclude Include="dictionary.h" />
     <ClInclude Include="ISolver.h" />
     <ClInclude Include="Position.h" />
+    <ClInclude Include="robin_hood.h" />
     <ClInclude Include="SegTree.h" />
     <ClInclude Include="SolverService.h" />
   </ItemGroup>
