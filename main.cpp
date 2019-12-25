@@ -14,6 +14,8 @@ int main() {
 	SetConsoleCP(1251);
 	SetConsoleOutputCP(1251);
 
+	srand(time(0));
+
 	unsolved.Load("Z:/Cross/xmn6877.ctb");
 	unsolved.Clear();
 	unsolved.PrintASCII();

@@ -4,10 +4,10 @@
 
 int Dictionary::process(string s){
 	size_t sz = s.size();
-	vector<unsigned short>& appropriate =
+	vector<int>& appropriate =
 		sortedWordIndice_[uc(s[0])][uc(s[1])][sz];
 	for (size_t k = 0; k < appropriate.size(); k++) {
-		unsigned short i = appropriate[k];
+		int i = appropriate[k];
 		bool add = true;
 		for (int j = 0; j < sz; j++) {
 			if (s[j] == emptyChar)continue;
@@ -23,7 +23,7 @@ int Dictionary::process(string s){
 	return sizeCounter_++;
 }
 
-void Dictionary::AddSorted(unsigned short index){
+void Dictionary::AddSorted(int index){
 	if (allWords_[index].size() < 2)return;
 	size_t sz = allWords_[index].size();
 	sortedWordIndice_[uc(allWords_[index][0])][uc(allWords_[index][1])][sz].push_back(index);
@@ -32,7 +32,7 @@ void Dictionary::AddSorted(unsigned short index){
 	sortedWordIndice_[uc(emptyChar)][uc(allWords_[index][1])][sz].push_back(index);
 }
 
-vector<unsigned short>& Dictionary::GetMem(int dictIndex){
+vector<int>& Dictionary::GetMem(int dictIndex){
 	return mem_[dictIndex];
 }
 

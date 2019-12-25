@@ -17,16 +17,16 @@ class Dictionary
 	using uc = unsigned char;
 private:
 	int process(string s);
-	void AddSorted(unsigned short index);
+	void AddSorted(int index);
 public:
-	vector<unsigned short>& GetMem(int dictIndex);
+	vector<int>& GetMem(int dictIndex);
 	int GetDictIndex(string s);
 	static int levenstein(string a, string b);
 public:
 	int sizeCounter_ = 0;
 
-	vector<unsigned short> sortedWordIndice_[256][256][50];
-	vector<unsigned short> mem_[1000000];
+	vector<int> sortedWordIndice_[256][256][50];
+	vector<int> mem_[1000000];
 
 	robin_hood::unordered_node_map<string, int> stringToDictIndex_;
 	robin_hood::unordered_node_map<string, string> explanationDict_;
